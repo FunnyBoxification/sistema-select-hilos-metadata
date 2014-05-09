@@ -110,17 +110,42 @@ int main(int argc, char** argv) {
 void *thread_handle_client(void* param_cS) {
 
 	int clientSocket = *(int *) param_cS;
-	puts("Nuevo cliente conectado.");
+	printf("Cliente %d conectado.",clientSocket);
 	int bufferSize;
 	char* buffer = malloc((bufferSize = sizeof(uint32_t)));
 
-	//
+	t_Paquete paquete;
+	int status = 1;
+
+	while(status) {
+		status = recibirYDeserializar(paquete,clientSocket);
+		if(status) puts(paquete.mensaje);
+	}
+	puts("Cliente desconectado");
+
+	close(clientSocket);
 
 	return NULL;
 }
 
 int recibirYDeserializar(t_Paquete* paquete, int clientSocket) {
 	int status;
+
+	int buffSize;
+	char* buffer = malloc(buffSize = sizeof(uint32_t));
+	uint32_t mensajeSize;
+
+	status = recv(clientSocket,buffer,sizeof(paquete->mensajeSize),0);
+
+	memcpy(&mensajeSize,buffer,buffSize);
+	if(!status) return 0;
+
+	//Recibo el mensaje
+	status = recv(clientSocket,paquete->mensaje,mensajeSize,0);
+	if(!status) return 0;
+
+	free(buffer);
+
 
 	return status;
 }
