@@ -44,7 +44,12 @@ int main(int argc, char** argv) {
 	int server_sockets[MAX_PUERTOS_ESCUCHADOS];
 	int maxDescriptor = -1;
 	for(int i = 0; i < MAX_PUERTOS_ESCUCHADOS; i++) {
-		if( getaddrinfo(NULL, PUERTO+i,&hints, &serverInfo) != 0) {
+
+		int puerto_int = atoi(PUERTO)+i;
+		char puerto_string[6];
+		sprintf(puerto_string,"%d",puerto_int);
+
+		if( getaddrinfo(NULL, puerto_string,&hints, &serverInfo) != 0) {
 				puts("Error en getaddrinfo");
 		}
 
