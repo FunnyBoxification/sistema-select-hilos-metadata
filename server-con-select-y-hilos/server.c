@@ -16,6 +16,7 @@
 //#include <netinet/in.h>
 //#include <arpa/inet.h>
 #include <netdb.h>
+#include <pthread.h>
 
 #define PUERTO "8547" // Puertos que se van a escuchar: 8547 , 8548, 8549, 8550
 #define MAX_PUERTOS_ESCUCHADOS 4
@@ -29,7 +30,7 @@ typedef struct {
 
 void *thread_handle_client(void*);
 
-int recibirYDeserializar(t_Paquete*, int);
+int recibirYDeserializar(t_Paquete* , int);
 
 
 int main(int argc, char** argv) {
@@ -43,7 +44,8 @@ int main(int argc, char** argv) {
 
 	int server_sockets[MAX_PUERTOS_ESCUCHADOS];
 	int maxDescriptor = -1;
-	for(int i = 0; i < MAX_PUERTOS_ESCUCHADOS; i++) {
+	int i;
+	for(i = 0; i < MAX_PUERTOS_ESCUCHADOS; i++) {
 
 		int puerto_int = atoi(PUERTO)+i;
 		char puerto_string[6];
@@ -74,12 +76,15 @@ int main(int argc, char** argv) {
 	char salir = 0;
 	fd_set readSockSet;
 
+	puts("Listillo pa escuchar!");
+
 
 	while (!salir) {
 		//Para poder estar al tanto de conexiones entrantes
-		FD_ZERO(readSockSet);
+		FD_ZERO(&readSockSet);
 		FD_SET(STDIN_FILENO,&readSockSet); //Si escribis algo en la consola del server es xq queres salir :B
-		for(int i=0; i<MAX_PUERTOS_ESCUCHADOS ; i++) {
+
+		for(i=0; i<MAX_PUERTOS_ESCUCHADOS ; i++) {
 			FD_SET(server_sockets[i],&readSockSet);
 		}
 
@@ -91,21 +96,21 @@ int main(int argc, char** argv) {
 				salir = 1;
 			}
 
-			for(int i = 0; i < MAX_PUERTOS_ESCUCHADOS;i++ ) {
-				if(FD_ISSET(server_sockets[i], readSockSet) ) {
-					printf("conexion entrante en puerto %d", PUERTO+i);
+			for(i = 0; i < MAX_PUERTOS_ESCUCHADOS;i++ ) {
+				if(FD_ISSET(server_sockets[i], &readSockSet) ) {
+					printf("conexion entrante en puerto %d", atoi(PUERTO)+i);
 					struct sockaddr_in clienteAddr;
 					socklen_t clienteAddrLen = sizeof(clienteAddr);
 					pthread_t threadid;
 					int clienteSock = accept(server_sockets[i], (struct sockaddr*) &clienteAddr, &clienteAddrLen);
 					if(clienteSock > 0) {
-						pthread_create_thread(&threadid,NULL,thread_handle_client,(void *) &clienteSock);
+						pthread_create(&threadid,NULL,thread_handle_client,(void *) &clienteSock);
 					}
 				}
 			}
 		}
 	}
-	for(int i = 0; i < MAX_PUERTOS_ESCUCHADOS; i++)
+	for(i = 0; i < MAX_PUERTOS_ESCUCHADOS; i++)
 		close(server_sockets[i]);
 
 	return 0;
@@ -115,16 +120,16 @@ int main(int argc, char** argv) {
 void *thread_handle_client(void* param_cS) {
 
 	int clientSocket = *(int *) param_cS;
-	printf("Cliente %d conectado.",clientSocket);
-	int bufferSize;
-	char* buffer = malloc((bufferSize = sizeof(uint32_t)));
+	printf("Cliente %d conectado.\n",clientSocket);
+
 
 	t_Paquete paquete;
 	int status = 1;
 
 	while(status) {
-		status = recibirYDeserializar(paquete,clientSocket);
-		if(status) puts(paquete.mensaje);
+		status = recibirYDeserializar(&paquete,clientSocket);
+		if(status) printf("Mensaje: %s\n",paquete.mensaje);
+		//free(paquete.mensaje);
 	}
 	puts("Cliente desconectado");
 
@@ -136,7 +141,7 @@ void *thread_handle_client(void* param_cS) {
 int recibirYDeserializar(t_Paquete* paquete, int clientSocket) {
 	int status;
 
-	int buffSize;
+	/*int buffSize;
 	char* buffer = malloc(buffSize = sizeof(uint32_t));
 	uint32_t mensajeSize;
 
@@ -144,12 +149,19 @@ int recibirYDeserializar(t_Paquete* paquete, int clientSocket) {
 
 	memcpy(&mensajeSize,buffer,buffSize);
 	if(!status) return 0;
+	paquete->mensaje = malloc(mensajeSize * sizeof(char));
 
 	//Recibo el mensaje
 	status = recv(clientSocket,paquete->mensaje,mensajeSize,0);
 	if(!status) return 0;
 
-	free(buffer);
+	free(buffer);*/
+
+	//int buffSize;
+	//paquete->mensaje = malloc(MAX_MESSAGE_SIZE);
+	status = recv(clientSocket,paquete->mensaje,MAX_MESSAGE_SIZE,0);
+	if(!status) return 0;
+
 
 
 	return status;
